@@ -44,6 +44,7 @@ minical =
   trigger: null
   align_to_trigger: true
   read_only: false
+  months: 1
   dropdowns:
     month: null
     day: null
@@ -62,40 +63,68 @@ minical =
     $li.html("
       <article>
         <header>
-          <h1>#{date_tools.getMonthName(date)} #{date.getFullYear()}</h1>
+          <h1></h1>
           <a href='#' class='minical_prev'></a>
           <a href='#' class='minical_next'></a>
         </header>
-        <section>
-          <table>
-            <thead>
-              <tr>
-              </tr>
-            </thead>
-            <tbody>
-            </tbody>
-          </table>
-        </section>
       </article>
     ")
+    $article = $li.find('article')
+    $h1 = $li.find('header h1')
+
+    renderDate = new Date(date);
+    for m in [1..@months]
+      $h1.append("#{date_tools.getMonthName(renderDate)} #{renderDate.getFullYear()}")
+      $h1.append(" - ") unless m == @months
+      
+      month = @renderMonth(renderDate)
+      month.addClass('minical_extra_month') if m > 1
+      
+      $article.append(month)
+      
+      renderDate.setMonth(renderDate.getMonth() + 1)
+
+    $li.find(".minical_prev").hide() if @from and @from > date_tools.getStartOfCalendarBlock(date)
+    $li.find(".#{@getDayClass(new Date())}").addClass("minical_today")
+    $li.find(".#{@getDayClass(@selected_day)}").addClass("minical_selected").addClass("minical_highlighted") if @selected_day
+    $li.find("td").not(".minical_disabled, .minical_past_month").eq(0).addClass("minical_highlighted") if !$li.find(".minical_highlighted").length
+    $li.find(".minical_next").hide() if @to and @to < new Date($li.find("td").last().data("minical_date"))
+    
+    @month_drawn.apply(@$el)
+    
+    @$cal.addClass("minical_multiple_months") if @months > 1
+    @$cal.empty().append($li)
+
+  renderMonth: (date) ->
+    $section = $('<section />')
+    $section.html("
+      <table>
+        <caption>#{date_tools.getMonthName(date)}</caption>
+        <thead>
+          <tr>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+    ")
+
     days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    $tr = $li.find("tr")
+
+    $tr = $section.find("tr")
+
     $("<th />", { text: day }).appendTo($tr) for day in days
-    $tbody = $li.find("tbody")
+    
+    $tbody = $section.find("tbody")
+    
     current_date = date_tools.getStartOfCalendarBlock(date)
-    $li.find(".minical_prev").hide() if @from and @from > current_date
     for w in [1..6]
       $tr = $("<tr />")
       for d in [1..7]
         $tr.append(@renderDay(current_date, date))
         current_date.setDate(current_date.getDate() + 1)
       $tr.appendTo($tbody) if $tr.find(".minical_day").length
-    $li.find(".#{@getDayClass(new Date())}").addClass("minical_today")
-    $li.find(".#{@getDayClass(@selected_day)}").addClass("minical_selected").addClass("minical_highlighted") if @selected_day
-    $li.find("td").not(".minical_disabled, .minical_past_month").eq(0).addClass("minical_highlighted") if !$li.find(".minical_highlighted").length
-    $li.find(".minical_next").hide() if @to and @to < new Date($li.find("td").last().data("minical_date"))
-    @month_drawn.apply(@$el)
-    @$cal.empty().append($li)
+    $section
   renderDay: (d, base_date) ->
     $td = $("<td />")
       .data("minical_date", new Date(d))
